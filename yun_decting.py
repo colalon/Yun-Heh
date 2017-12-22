@@ -30,8 +30,8 @@ class dectect:
         self.cb = (1.0-self.alpha)*self.cb + self.alpha*self.gray_frame
         
         self.combine = (self.ap*1.0+self.mp*1.0)
-        self.combine[self.combine<=300]=0
-        self.combine[self.combine>300]=255
+        self.combine[self.combine<=100]=0
+        self.combine[self.combine>100]=255
         
         self.combine = np.uint8(self.combine)
         kernel = np.array(([[1,1,1],[1,1,1],[1,1,1]]), np.uint8)
@@ -39,10 +39,12 @@ class dectect:
         self.dilatecombine = cv2.dilate(self.erodecombine, kernel, iterations=5)
         self.combine_renoise= cv2.medianBlur(self.dilatecombine,5)
         
-        self.components_count,self.components=cv2.connectedComponents(self.combine_renoise)
+        #self.components_count,self.components=cv2.connectedComponents(self.combine_renoise)
+        
+        self.ComponentStats = cv2.connectedComponentsWithStats(self.combine_renoise, 4, cv2.CV_32S)
         
         self.component_result=self.frame.copy()
-        self.components_mask=self.components.copy()
+        self.components_mask=self.ComponentStats[1].copy()
         self.components_mask[self.components_mask>0]=255
         self.components_mask = np.uint8(self.components_mask)
         self.component_result[:,:,1]=self.components_mask
@@ -51,10 +53,14 @@ class dectect:
         
         self.rect_result=self.frame.copy()
         
-        self.component_work()
-        for i in range (1,self.components_count):
-            if self.fish_list[i,0] > self.area:
-                cv2.rectangle(self.rect_result,(self.fish_list[i,1],self.fish_list[i,2]),(self.fish_list[i,3],self.fish_list[i,4]),(0,0,255),2)
+        #self.component_work()
+        for i in range (1,self.ComponentStats[0]):
+            if self.ComponentStats[2][i,4] > self.area:
+                left=self.ComponentStats[2][i,0]
+                top=self.ComponentStats[2][i,1]
+                width=self.ComponentStats[2][i,2]
+                height=self.ComponentStats[2][i,3]
+                cv2.rectangle(self.rect_result,(left,top),(left+width,top+height),(0,0,255),2)
                 
     
     def otus(self):
@@ -78,7 +84,7 @@ class dectect:
                 level = i
                 maximum = between
         return level
-    
+    '''
     def component_work(self):
         self.fish_list = np.zeros((self.components_count,5),'int')
         self.fish_list[:,1] = 100000
@@ -94,6 +100,7 @@ class dectect:
                 self.fish_list[index,2]=i if i<self.fish_list[index,2] else self.fish_list[index,2]
                 self.fish_list[index,3]=j if j>self.fish_list[index,3] else self.fish_list[index,3]
                 self.fish_list[index,4]=i if i>self.fish_list[index,4] else self.fish_list[index,4]
+                '''
                 
         
         
